@@ -1,13 +1,33 @@
 # ======================
-# 🎁 Bonus: 射击功能
+# 🎁 Bonus: 射击 + 平滑移动
 # ======================
-# 学习目标：
-# - 创建子弹系统
-# - 实现子弹与陨石的碰撞检测
-# - 按空格键发射子弹
-# - 综合运用之前学到的所有知识
+# 这是给进度快的同学的挑战！
 #
-# 💪 这是挑战关卡！需要综合运用之前学的所有知识
+# 【你将学到的新概念】
+#
+# 一、平滑移动系统
+#    - 速度 (velocity) - 物体移动的快慢和方向
+#    - 加速度 (acceleration) - 按键时速度增加
+#    - 摩擦力 (friction) - 松开按键后速度逐渐减小
+#    - onkeyrelease - 检测按键松开
+#
+# 二、射击系统
+#    - 冷却时间 (cooldown) - 防止连续射击太快
+#    - 列表切片 bullets[:] - 安全地遍历并修改列表
+#
+# 【设计动机】
+#
+# Q: 为什么要平滑移动？之前的移动方式有什么问题？
+# A: 之前按一下移动20像素，手感生硬。平滑移动有加速和惯性，更像真实飞船。
+#
+# Q: 摩擦力是怎么实现的？
+# A: 每帧把速度乘以一个小于1的数（如0.85），速度就会逐渐变小。
+#
+# Q: 为什么需要 onkeyrelease？
+# A: 要知道玩家什么时候松开按键，才能停止加速、让摩擦力生效。
+#
+# Q: 为什么需要冷却时间？
+# A: 没有冷却，按住空格瞬间发射几十颗子弹，游戏太简单且卡顿。
 
 import turtle
 import random
@@ -20,8 +40,25 @@ import time
 score = 0
 game_over = False
 last_score_time = time.time()
-last_shot_time = 0  # 上次射击时间
-shoot_cooldown = 0.3  # 射击冷却时间（秒）
+
+# 射击配置
+last_shot_time = 0
+shoot_cooldown = 0.3  # 射击冷却 0.3 秒
+
+# ======================
+# 【新概念】平滑移动配置
+# ======================
+# 传统移动：按一下 → 瞬间移动固定距离
+# 平滑移动：按住 → 加速，松开 → 摩擦减速
+
+keys_pressed = set()  # 存储当前按下的键（用集合避免重复）
+
+player_vx = 0  # 水平速度 (velocity x)
+player_vy = 0  # 垂直速度 (velocity y)
+
+acceleration = 1.2  # 加速度：按键时每帧增加的速度
+friction = 0.85  # 摩擦系数：每帧速度乘以这个数（<1 所以会减小）
+max_speed = 12  # 最大速度：防止飞船飞太快
 
 # ======================
 # 创建游戏窗口
@@ -71,58 +108,95 @@ def draw_thruster():
 
 
 # ======================
-# 飞船移动
+# 【任务1】平滑移动系统
 # ======================
 
 
-def move_left():
-    if player.xcor() > -380:
-        player.setx(player.xcor() - 20)
+def key_press(key):
+    """按键按下时，把键名加入集合"""
+    keys_pressed.add(key)
 
 
-def move_right():
-    if player.xcor() < 380:
-        player.setx(player.xcor() + 20)
+def key_release(key):
+    """按键松开时，把键名从集合移除"""
+    keys_pressed.discard(key)  # discard 不会报错（即使 key 不存在）
 
 
-def move_up():
-    if player.ycor() < 200:
-        player.sety(player.ycor() + 20)
+def update_player_movement():
+    """
+    每帧调用，根据按键状态更新飞船速度和位置
 
+    【物理原理】
+    1. 按键 → 加速（速度增加）
+    2. 松开 → 摩擦（速度乘以 <1 的数，逐渐减小）
+    3. 速度 → 位置（位置 += 速度）
+    """
+    global player_vx, player_vy
 
-def move_down():
-    if player.ycor() > -280:
-        player.sety(player.ycor() - 20)
+    # TODO: 根据按键加速
+    # 如果 "Left" 在 keys_pressed 中，水平速度减小
+    if "Left" in keys_pressed or "a" in keys_pressed:
+        player_vx -= ______  # 填 acceleration
+
+    # TODO: 右移加速
+    if "Right" in keys_pressed or "d" in keys_pressed:
+        player_vx += ______
+
+    # TODO: 上移加速
+    if "Up" in keys_pressed or "w" in keys_pressed:
+        player_vy += ______
+
+    # TODO: 下移加速
+    if "Down" in keys_pressed or "s" in keys_pressed:
+        player_vy -= ______
+
+    # 限制最大速度
+    player_vx = max(-max_speed, min(max_speed, player_vx))
+    player_vy = max(-max_speed, min(max_speed, player_vy))
+
+    # TODO: 应用摩擦力（速度乘以 friction）
+    player_vx *= ______
+    player_vy *= ______
+
+    # 速度很小时归零（防止无限滑动）
+    if abs(player_vx) < 0.1:
+        player_vx = 0
+    if abs(player_vy) < 0.1:
+        player_vy = 0
+
+    # 计算新位置
+    new_x = player.xcor() + player_vx
+    new_y = player.ycor() + player_vy
+
+    # 边界检测
+    if -380 <= new_x <= 380:
+        player.setx(new_x)
+    else:
+        player_vx = 0  # 撞墙速度归零
+
+    if -280 <= new_y <= 200:
+        player.sety(new_y)
+    else:
+        player_vy = 0
 
 
 # ======================
-# 任务1：创建子弹系统
+# 【任务2】子弹系统
 # ======================
 
-# TODO: 创建一个空列表来存储子弹（和陨石一样的思路）
-bullets = ______
+bullets = []
 
 
 def create_bullet():
-    """创建一颗新子弹"""
+    """创建一颗子弹"""
     bullet = turtle.Turtle()
-
-    # TODO: 设置子弹形状为 "square"
-    bullet.shape(______)
-
-    # TODO: 设置子弹颜色为黄色 "#ffff00"
-    bullet.color(______)
-
-    bullet.shapesize(0.2, 0.5)  # 细长的形状
+    bullet.shape("square")
+    bullet.color("#ffff00")
+    bullet.shapesize(0.2, 0.5)
     bullet.penup()
-    bullet.setheading(90)  # 朝向上方
-
-    # TODO: 设置子弹初始位置 = 飞船位置上方
-    # 提示：使用 player.xcor() 和 player.ycor() + 20
-    bullet.setposition(player.______(), player.______() + 20)
-
-    # TODO: 把子弹添加到 bullets 列表
-    bullets.______(bullet)
+    bullet.setheading(90)
+    bullet.setposition(player.xcor(), player.ycor() + 20)
+    bullets.append(bullet)
 
 
 def shoot():
@@ -130,32 +204,19 @@ def shoot():
     global last_shot_time
 
     current_time = time.time()
-
-    # TODO: 检查冷却时间是否已过
-    # 如果 current_time - last_shot_time >= shoot_cooldown
-    if current_time - last_shot_time >= ______:
+    if current_time - last_shot_time >= shoot_cooldown:
         create_bullet()
         last_shot_time = current_time
 
 
-# ======================
-# 任务2：移动子弹
-# ======================
-
-
 def move_bullets():
     """移动所有子弹"""
-    # 使用 bullets[:] 创建列表副本，避免遍历时修改原列表
-    for bullet in bullets[:]:
+    for bullet in bullets[:]:  # [:] 创建副本，安全遍历
         y = bullet.ycor()
-
-        # TODO: 子弹向上移动，速度为 15
-        y += ______
-
+        y += 15
         bullet.sety(y)
 
-        # TODO: 如果子弹超出屏幕顶部（y > 310），移除子弹
-        if y > ______:
+        if y > 310:
             bullet.hideturtle()
             bullets.remove(bullet)
 
@@ -180,7 +241,6 @@ def create_asteroid():
 
 
 def reset_asteroid(asteroid):
-    """重置陨石位置"""
     asteroid.setposition(random.randint(-380, 380), random.randint(300, 450))
     asteroid.dy = random.uniform(-2, -4)
     asteroid.color(random.choice(asteroid_colors))
@@ -203,37 +263,24 @@ def move_asteroids():
 
 
 # ======================
-# 任务3：子弹击中陨石检测
+# 【任务3】子弹击中检测
 # ======================
 
 
 def check_bullet_hit():
-    """检测子弹是否击中陨石"""
+    """检测子弹击中陨石"""
     global score
 
-    # 遍历所有子弹
     for bullet in bullets[:]:
-        # 遍历所有陨石
         for asteroid in asteroids:
-            # TODO: 计算子弹和陨石的距离
-            # 如果距离 < 20，表示击中
-            if bullet.______(asteroid) < ______:
-                # 击中了！
-
-                # TODO: 分数增加 5 分
-                score += ______
-
-                # 移除子弹
+            # TODO: 距离 < 20 表示击中
+            if bullet.distance(asteroid) < ______:
+                score += 5
                 bullet.hideturtle()
                 bullets.remove(bullet)
-
-                # 重置陨石到顶部
                 reset_asteroid(asteroid)
-
-                # 创建爆炸效果
                 create_explosion(asteroid.xcor(), asteroid.ycor())
-
-                break  # 一颗子弹只能击中一个陨石
+                break
 
 
 # ======================
@@ -244,7 +291,6 @@ explosions = []
 
 
 def create_explosion(x, y):
-    """在指定位置创建爆炸效果"""
     exp = turtle.Turtle()
     exp.hideturtle()
     exp.penup()
@@ -254,7 +300,6 @@ def create_explosion(x, y):
 
 
 def update_explosions():
-    """更新爆炸动画"""
     for exp in explosions[:]:
         if exp.timer > 0:
             exp.clear()
@@ -267,7 +312,7 @@ def update_explosions():
 
 
 # ======================
-# 飞船与陨石碰撞检测（已完成）
+# 碰撞检测（已完成）
 # ======================
 
 
@@ -301,7 +346,7 @@ tip_display.color("#88ff88")
 tip_display.penup()
 tip_display.hideturtle()
 tip_display.setposition(0, 260)
-tip_display.write("按空格键射击!", font=("Courier", 14, "bold"))
+tip_display.write("WASD/方向键移动 空格射击", font=("Courier", 12, "bold"))
 
 
 def update_score():
@@ -350,35 +395,50 @@ def show_game_over():
 
 
 # ======================
-# 任务4：绑定空格键
+# 【任务4】键盘绑定
 # ======================
+# 平滑移动需要同时绑定 onkeypress 和 onkeyrelease
 
 screen.listen()
-screen.onkeypress(move_left, "Left")
-screen.onkeypress(move_right, "Right")
-screen.onkeypress(move_up, "Up")
-screen.onkeypress(move_down, "Down")
-screen.onkeypress(move_left, "a")
-screen.onkeypress(move_right, "d")
-screen.onkeypress(move_up, "w")
-screen.onkeypress(move_down, "s")
 
-# TODO: 绑定空格键到 shoot 函数
-screen.onkeypress(______, "space")
+# TODO: 方向键 - 按下时调用 key_press
+screen.onkeypress(lambda: key_press("Left"), "Left")
+screen.onkeypress(lambda: key_press("Right"), "Right")
+screen.onkeypress(lambda: key_press("Up"), "Up")
+screen.onkeypress(lambda: key_press("Down"), "Down")
+
+# WASD键 - 按下
+screen.onkeypress(lambda: key_press("a"), "a")
+screen.onkeypress(lambda: key_press("d"), "d")
+screen.onkeypress(lambda: key_press("w"), "w")
+screen.onkeypress(lambda: key_press("s"), "s")
+
+# TODO: 方向键 - 松开时调用 key_release
+screen.onkeyrelease(lambda: key_release("Left"), "Left")
+screen.onkeyrelease(lambda: key_release("______"), "Right")  # 填 Right
+screen.onkeyrelease(lambda: key_release("______"), "Up")  # 填 Up
+screen.onkeyrelease(lambda: key_release("______"), "Down")  # 填 Down
+
+# WASD键 - 松开
+screen.onkeyrelease(lambda: key_release("a"), "a")
+screen.onkeyrelease(lambda: key_release("d"), "d")
+screen.onkeyrelease(lambda: key_release("w"), "w")
+screen.onkeyrelease(lambda: key_release("s"), "s")
+
+# 射击
+screen.onkeypress(shoot, "space")
 
 # ======================
-# 任务5：更新游戏主循环
+# 【任务5】游戏主循环
 # ======================
 
 while not game_over:
+    # TODO: 调用平滑移动更新函数
+    update_player_______()
+
     move_asteroids()
-
-    # TODO: 调用移动子弹函数
-    ______()
-
-    # TODO: 调用检测子弹击中函数
-    ______()
-
+    move_bullets()
+    check_bullet_hit()
     update_explosions()
     update_score()
     draw_thruster()
@@ -396,9 +456,10 @@ screen.exitonclick()
 
 
 # ======================
-# 🎯 完成后的挑战
+# 🎯 完成后的额外挑战
 # ======================
-# 1. 修改 shoot_cooldown 的值，让射击更快或更慢
-# 2. 修改击中陨石的得分，从 5 分改成 10 分
-# 3. 修改子弹颜色和速度
-# 4. 【高级】添加子弹数量限制（屏幕上最多5颗子弹）
+# 1. 修改 acceleration = 2.0，体验更灵敏的操控
+# 2. 修改 friction = 0.95，体验更长的滑行距离
+# 3. 修改 max_speed = 20，体验极速飞船
+# 4. 修改 shoot_cooldown = 0.2，体验更快的射击速度
+# 5. 添加子弹数量限制

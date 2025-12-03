@@ -22,6 +22,16 @@ last_shot_time = 0  # 上次射击时间
 shoot_cooldown = 0.3  # 射击冷却时间（秒）
 
 # ======================
+# 【新增】平滑移动系统
+# ======================
+keys_pressed = set()  # 当前按下的键
+player_vx = 0  # 水平速度
+player_vy = 0  # 垂直速度
+acceleration = 1.2  # 加速度
+friction = 0.85  # 摩擦系数
+max_speed = 12  # 最大速度
+
+# ======================
 # 创建游戏窗口
 # ======================
 
@@ -69,28 +79,62 @@ def draw_thruster():
 
 
 # ======================
-# 飞船移动
+# 【改进】平滑移动系统
 # ======================
 
 
-def move_left():
-    if player.xcor() > -380:
-        player.setx(player.xcor() - 20)
+def key_press(key):
+    """按键按下时调用"""
+    keys_pressed.add(key)
 
 
-def move_right():
-    if player.xcor() < 380:
-        player.setx(player.xcor() + 20)
+def key_release(key):
+    """按键松开时调用"""
+    keys_pressed.discard(key)
 
 
-def move_up():
-    if player.ycor() < 200:
-        player.sety(player.ycor() + 20)
+def update_player_movement():
+    """根据按键状态更新飞船速度和位置"""
+    global player_vx, player_vy
 
+    # 根据按键加速
+    if "Left" in keys_pressed or "a" in keys_pressed:
+        player_vx -= acceleration
+    if "Right" in keys_pressed or "d" in keys_pressed:
+        player_vx += acceleration
+    if "Up" in keys_pressed or "w" in keys_pressed:
+        player_vy += acceleration
+    if "Down" in keys_pressed or "s" in keys_pressed:
+        player_vy -= acceleration
 
-def move_down():
-    if player.ycor() > -280:
-        player.sety(player.ycor() - 20)
+    # 限制最大速度
+    player_vx = max(-max_speed, min(max_speed, player_vx))
+    player_vy = max(-max_speed, min(max_speed, player_vy))
+
+    # 应用摩擦力
+    player_vx *= friction
+    player_vy *= friction
+
+    # 速度很小时归零（防止无限滑动）
+    if abs(player_vx) < 0.1:
+        player_vx = 0
+    if abs(player_vy) < 0.1:
+        player_vy = 0
+
+    # 更新位置
+    new_x = player.xcor() + player_vx
+    new_y = player.ycor() + player_vy
+
+    # 边界检测
+    if -380 <= new_x <= 380:
+        player.setx(new_x)
+    else:
+        player_vx = 0  # 撞墙速度归零
+
+    if -280 <= new_y <= 200:
+        player.sety(new_y)
+    else:
+        player_vy = 0  # 撞墙速度归零
 
 
 # ======================
@@ -322,25 +366,44 @@ def show_game_over():
 
 
 # ======================
-# 键盘绑定
+# 键盘绑定（状态追踪）
 # ======================
 
 screen.listen()
-screen.onkeypress(move_left, "Left")
-screen.onkeypress(move_right, "Right")
-screen.onkeypress(move_up, "Up")
-screen.onkeypress(move_down, "Down")
-screen.onkeypress(move_left, "a")
-screen.onkeypress(move_right, "d")
-screen.onkeypress(move_up, "w")
-screen.onkeypress(move_down, "s")
-screen.onkeypress(shoot, "space")  # 空格键发射子弹
+
+# 方向键 - 按下
+screen.onkeypress(lambda: key_press("Left"), "Left")
+screen.onkeypress(lambda: key_press("Right"), "Right")
+screen.onkeypress(lambda: key_press("Up"), "Up")
+screen.onkeypress(lambda: key_press("Down"), "Down")
+
+# WASD键 - 按下
+screen.onkeypress(lambda: key_press("a"), "a")
+screen.onkeypress(lambda: key_press("d"), "d")
+screen.onkeypress(lambda: key_press("w"), "w")
+screen.onkeypress(lambda: key_press("s"), "s")
+
+# 方向键 - 松开
+screen.onkeyrelease(lambda: key_release("Left"), "Left")
+screen.onkeyrelease(lambda: key_release("Right"), "Right")
+screen.onkeyrelease(lambda: key_release("Up"), "Up")
+screen.onkeyrelease(lambda: key_release("Down"), "Down")
+
+# WASD键 - 松开
+screen.onkeyrelease(lambda: key_release("a"), "a")
+screen.onkeyrelease(lambda: key_release("d"), "d")
+screen.onkeyrelease(lambda: key_release("w"), "w")
+screen.onkeyrelease(lambda: key_release("s"), "s")
+
+# 射击
+screen.onkeypress(shoot, "space")
 
 # ======================
 # 游戏主循环
 # ======================
 
 while not game_over:
+    update_player_movement()  # 【新增】平滑移动更新
     move_asteroids()
     move_bullets()  # 移动子弹
     check_bullet_hit()  # 检测子弹击中陨石
