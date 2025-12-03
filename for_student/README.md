@@ -21,6 +21,7 @@
 | `step4_collision.py` | 碰撞检测 | ⭐⭐ |
 | `step5_multiple.py` | 多颗陨石 | ⭐⭐⭐ |
 | `step6_score.py` | 计分系统 | ⭐⭐⭐ |
+| `step7_bonus_shooting.py` | 🎁 **Bonus**: 射击功能 | ⭐⭐⭐⭐ |
 
 ## 🎯 如何填空
 

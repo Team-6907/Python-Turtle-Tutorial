@@ -17,6 +17,7 @@
 | `step4_collision.py` | Step 4 | 碰撞检测 |
 | `step5_multiple.py` | Step 5 | 多颗陨石 |
 | `step6_score.py` | Step 6 | 计分与难度系统 |
+| `step7_bonus_shooting.py` | 🎁 Bonus | 射击功能（空格键发射子弹）|
 | `meteor_final.py` | 完整版 | 包含所有功能的最终版本 |
 
 ## 使用建议
